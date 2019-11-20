@@ -35,6 +35,7 @@
 
   function startUserMedia(stream) {
     var input = audio_context.createMediaStreamSource(stream);
+    audio_context.resume()
     __log('Media stream created.');
 
     // Uncomment if you want the audio to feedback directly
