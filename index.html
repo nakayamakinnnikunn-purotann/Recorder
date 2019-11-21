@@ -87,18 +87,41 @@
     try {
       // webkit shim
       window.AudioContext = window.AudioContext || window.webkitAudioContext;
-      navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia;
+      if (navigator.mediaDevices === undefined) {
+        navigator.mediaDevices = {};
+      }
+      if (navigator.mediaDevices.getUserMedia === undefined) {
+        navigator.mediaDevices.getUserMedia = function(constraints) {
+          // First get ahold of the legacy getUserMedia, if present
+          let getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+
+          // Some browsers just don't implement it - return a rejected promise with an error
+          // to keep a consistent interface
+          if (!getUserMedia) {
+            return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+          }
+
+          // Otherwise, wrap the call to the old navigator.getUserMedia with a Promise
+          return new Promise(function(resolve, reject) {
+            getUserMedia.call(navigator, constraints, resolve, reject);
+          });
+        }
+      }
       window.URL = window.URL || window.webkitURL;
       
       audio_context = new AudioContext;
       __log('Audio context set up.');
-      __log('navigator.getUserMedia ' + (navigator.getUserMedia ? 'available.' : 'not present!'));
+      __log('navigator.mediaDevices ' + (navigator.mediaDevices.length != 0 ? 'available.' : 'not present!'));
     } catch (e) {
       alert('No web audio support in this browser!');
     }
     
-    navigator.getUserMedia({audio: true}, startUserMedia, function(e) {
-      __log('No live audio input: ' + e);
+    navigator.mediaDevices.getUserMedia({audio: true})
+      .then(function(stream) {
+        startUserMedia(stream);
+      })
+      .catch(function(e) {
+        __log('No live audio input: ' + e);
     });
   };
   </script>
